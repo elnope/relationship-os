@@ -65,8 +65,8 @@ export default function PeoplePage() {
       })
       .sort((a: any, b: any) => {
         // Sort by status priority (fading first), then by score
-        const statusOrder = { fading: 0, lost_contact: 1, stable: 2, growing: 3 };
-        const statusDiff = statusOrder[a.relationshipStatus] - statusOrder[b.relationshipStatus];
+        const statusOrder: Record<string, number> = { fading: 0, lost_contact: 1, stable: 2, growing: 3 };
+        const statusDiff = (statusOrder[a.relationshipStatus] ?? 4) - (statusOrder[b.relationshipStatus] ?? 4);
         if (statusDiff !== 0) return statusDiff;
         return b.relationshipStrengthScore - a.relationshipStrengthScore;
       });
@@ -175,9 +175,9 @@ export default function PeoplePage() {
                 )}
               >
                 {filter.label}
-                {statusCounts[filter.id as keyof typeof statusCounts] > 0 && (
+                {(statusCounts as any)[filter.id] > 0 && (
                   <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs bg-black/10">
-                    {statusCounts[filter.id as keyof typeof statusCounts]}
+                    {(statusCounts as any)[filter.id]}
                   </span>
                 )}
               </button>

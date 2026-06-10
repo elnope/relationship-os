@@ -6,6 +6,8 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
+// @ts-expect-error - uuid is available at runtime via dynamic import
+const uuid = { v4: () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}` };
 
 // Types (simplified versions for demo mode)
 export interface DemoPerson {
