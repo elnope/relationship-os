@@ -1,0 +1,405 @@
+// =============================================================================
+// Relationship OS - Database Schema
+// Generated for Phase 5: Database Setup
+// =============================================================================
+// 
+// This schema defines the data model for Relationship OS, a personal CRM
+// focused on tracking and nurturing meaningful relationships over time.
+//
+// Key Design Decisions:
+// - UUIDs for IDs (scalable, secure, no ID collisions)
+// - Soft deletes (deletedAt) for audit trail
+// - Timestamps (createdAt, updatedAt) auto-managed
+// - Enums for type safety on critical fields
+// - QuickTags as JSON array for flexibility
+//
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+/// Relationship type classification for people in your network.
+/// Controls time-decay rates in the relationship strength algorithm.
+enum RelationshipType {
+  /// Family members - slowest decay rate (0.05/day)
+  /// Baseline: Parents, siblings, extended family
+  family
+
+  /// Romantic partner - slow decay rate (0.08/day)
+  partner
+
+  /// Close friends - moderate decay rate (0.15/day)
+  friend
+
+  /// Mentors/senior advisors - slow decay rate (0.12/day)
+  mentor
+
+  /// Work colleagues - moderate-fast decay rate (0.25/day)
+  colleague
+
+  /// Clients/business contacts - fast decay rate (0.30/day)
+  client
+
+  /// Neighbors - fast decay rate (0.35/day)
+  neighbor
+
+  /// Other acquaintances - fastest decay rate (0.40/day)
+  other
+}
+
+/// Current health status of a relationship.
+/// Derived from relationship strength score with type-specific thresholds.
+enum RelationshipStatus {
+  /// Score >= 70 (family: >= 65) - Thriving, regular interactions
+  growing
+
+  /// Score >= 50 (family: >= 40) - Stable, maintaining connection
+  stable
+
+  /// Score >= 25 (family: >= 15) - Needs attention, fading
+  fading
+
+  /// Score < 25 - At risk, consider reaching out
+  lost_contact
+}
+
+/// Types of interactions that can be logged.
+/// Each type has different weight in the relationship strength algorithm.
+enum InteractionType {
+  /// In-person coffee meeting
+  coffee
+
+  /// Phone call
+  call
+
+  /// Video conference call
+  video_call
+
+  /// In-person chat/conversation
+  chat
+
+  /// Shared meal (breakfast, lunch, dinner)
+  meal
+
+  /// Drinks (coffee, tea, beer, cocktails)
+  drinks
+
+  /// Shared activity (sports, hobby, workout)
+  activity
+
+  /// Event attendance (wedding, birthday, party)
+  event
+
+  /// Gift given or received
+  gift
+
+  /// Text/SMS message
+  text
+
+  /// Email communication
+  email
+
+  /// Other interaction type
+  other
+}
+
+// =============================================================================
+// USER (Auth & Multi-tenancy)
+// =============================================================================
+
+/// Application user account.
+/// Each user has isolated data (people, interactions, etc.)
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ---------------------------------------------------------------------------
+  // Relations
+  // ---------------------------------------------------------------------------
+  people           Person[]
+  interactions     Interaction[]
+  tags             Tag[]
+  promiseReminders PromiseReminder[]
+
+  @@map("users")
+}
+
+// =============================================================================
+// PERSON (Core Entity)
+// =============================================================================
+
+/// A person in your network - the central entity of Relationship OS.
+///
+/// Relationship Strength Score (0-100):
+/// - Calculated using hybrid formula: Base Score + (Interaction Weights × Rating) - Time Decay
+/// - Recalculated on every new interaction
+/// - Status auto-derived from score with type-specific thresholds
+model Person {
+  id                       String             @id @default(uuid())
+  userId                   String
+  name                     String
+  
+  // Avatar
+  avatarUrl                String?
+  
+  // Relationship classification
+  relationshipType         RelationshipType
+  relationshipStatus       RelationshipStatus @default(stable)
+  
+  // Calculated score (0-100)
+  // Updated via trigger/service after each interaction
+  relationshipStrengthScore Int              @default(50)
+  
+  // Optional notes about the person
+  notes                    String?
+  
+  // Timestamps
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+  
+  // Soft delete for data recovery
+  deletedAt                DateTime?
+  
+  // ---------------------------------------------------------------------------
+  // Relations
+  // ---------------------------------------------------------------------------
+  
+  /// Owner of this person record
+  user                     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  /// All interactions with this person
+  interactions             Interaction[]
+  
+  /// All promises/reminders related to this person
+  promiseReminders         PromiseReminder[]
+  
+  /// Tags assigned to this person (many-to-many via junction)
+  tags                     PersonTag[]
+  
+  /// Last interaction date (denormalized for quick queries)
+  lastInteractionAt        DateTime?
+
+  @@index([userId])
+  @@index([relationshipStatus])
+  @@index([relationshipStrengthScore])
+  @@map("people")
+}
+
+// =============================================================================
+// INTERACTION (Activity Logging)
+// =============================================================================
+
+/// A logged interaction with a person.
+///
+/// This is the primary event that drives relationship strength calculations.
+/// Each new interaction triggers a score recalculation.
+model Interaction {
+  id            String         @id @default(uuid())
+  
+  // Foreign keys
+  personId      String
+  userId        String
+  
+  // Interaction details
+  interactionType InteractionType
+  rating        Int            // 1-5 stars
+  
+  // Flexible tags for categorization
+  // Stored as JSON array: ["thân_mật", "công_việc", "vui_vẻ"]
+  quickTags     String[]       @default([])
+  
+  // Free-form note (Vietnamese text supported)
+  freeTextNote  String?
+  
+  // When the interaction actually happened (may differ from createdAt)
+  interactionDate DateTime     @default(now())
+  
+  // Timestamps
+  createdAt     DateTime       @default(now())
+
+  // ---------------------------------------------------------------------------
+  // Relations
+  // ---------------------------------------------------------------------------
+  
+  /// Person who was interacted with
+  person        Person         @relation(fields: [personId], references: [id], onDelete: Cascade)
+  
+  /// User who logged this interaction
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([personId])
+  @@index([userId])
+  @@index([interactionDate])
+  @@map("interactions")
+}
+
+// =============================================================================
+// TAG (Categorization)
+// =============================================================================
+
+/// User-defined tags for categorizing people.
+///
+/// Examples: #GiaDinh, #CongViec, #TheThao, #UET, #Tech
+/// Tags are user-specific (multi-tenant via userId).
+model Tag {
+  id        String   @id @default(uuid())
+  userId    String
+  
+  name      String   // Display name, e.g., "GiaDinh"
+  color     String   // Hex color, e.g., "#EF4444"
+  icon      String?  // Optional emoji or icon name
+  
+  createdAt DateTime @default(now())
+
+  // ---------------------------------------------------------------------------
+  // Relations
+  // ---------------------------------------------------------------------------
+  
+  /// Owner of this tag
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  /// People with this tag (junction)
+  people    PersonTag[]
+
+  @@unique([userId, name]) // Tag names are unique per user
+  @@map("tags")
+}
+
+// =============================================================================
+// JUNCTION: PersonTag (Many-to-Many)
+// =============================================================================
+
+/// Junction table for Person ↔ Tag many-to-many relationship.
+///
+/// Example:
+/// - Person "Anh Tuấn" has tags: [GiaDinh, Mentor]
+/// - Tag "Tech" is assigned to: [Annie, David, Lan]
+model PersonTag {
+  personId  String
+  tagId     String
+  
+  // Junction table doesn't need its own ID - composite key is sufficient
+  
+  // ---------------------------------------------------------------------------
+  // Relations
+  // ---------------------------------------------------------------------------
+  
+  person    Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([personId, tagId]) // Composite primary key
+  @@map("person_tags")
+}
+
+// =============================================================================
+// PROMISE REMINDER (Accountability)
+// =============================================================================
+
+/// A promise or reminder to follow up with someone.
+///
+/// Examples:
+/// - "Gửi tài liệu AI cho Lan Chi" (deadline: +2 days)
+/// - "Hẹn tập xà đơn cuối tuần" (deadline: Saturday)
+/// - "Cà phê bàn chiến thuật" (deadline: +1 week)
+model PromiseReminder {
+  id          String    @id @default(uuid())
+  
+  // Foreign keys
+  userId      String
+  personId    String
+  
+  // Promise details
+  title       String    // Short title, e.g., "Gửi tài liệu"
+  description String?   // Optional detailed description
+  
+  // Deadline
+  deadline    DateTime
+  
+  // Completion tracking
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // ---------------------------------------------------------------------------
+  // Relations
+  // ---------------------------------------------------------------------------
+  
+  /// User who made this promise
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  /// Person this promise is related to
+  person     Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([personId])
+  @@index([deadline])
+  @@index([isCompleted])
+  @@map("promise_reminders")
+}
+
+// =============================================================================
+// DATABASE COMMENTS (for documentation)
+// =============================================================================
+
+// Below are extended comments that can be used for documentation generation.
+// These are typically not rendered by Prisma but can be extracted by tools.
+
+// -- Relationship Strength Algorithm Notes --
+//
+// The relationship strength score is calculated using a hybrid formula:
+//
+//   score = BASE_SCORE + INTERACTION_BONUS - TIME_DECAY
+//
+// Where:
+// - BASE_SCORE = 50 (neutral starting point)
+// - INTERACTION_BONUS = weighted sum of recent interactions (max +40)
+//   - Weighted by: interaction type, rating (1-5), recency
+// - TIME_DECAY = logarithmic decay based on days since last interaction
+//   - Rate depends on relationship type (family slowest, other fastest)
+//
+// Thresholds for Status (with family adjustments):
+// - growing:  >= 70 (family: >= 65)
+// - stable:   >= 50 (family: >= 40)
+// - fading:   >= 25 (family: >= 15)
+// - lost_contact: < 25
+//
+// Decay Rates per Day:
+// - family:     0.05
+// - partner:    0.08
+// - friend:     0.15
+// - mentor:     0.12
+// - colleague:  0.25
+// - client:     0.30
+// - neighbor:   0.35
+// - other:     0.40
+//
+// Interaction Weights:
+// - coffee:      1.0
+// - call:        1.0
+// - video_call:  1.1
+// - chat:        0.6
+// - meal:        1.2
+// - drinks:      0.9
+// - activity:    1.1
+// - event:       1.3
+// - gift:        1.4
+// - text:        0.4
+// - email:       0.3
+// - other:       0.5
