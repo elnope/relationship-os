@@ -128,23 +128,53 @@ Open [http://localhost:3000](http://localhost:3000) to view the app.
 4. Click **Create new project**
 5. Wait for the project to be provisioned (~2 minutes)
 
-### Step 2: Get Your Connection String
+### Step 2: Get Your Connection Strings
 
 1. In your Supabase project, go to **Settings** → **Database**
-2. Scroll to **Connection string** section
-3. Select **URI** tab
-4. Copy the connection string (it looks like: `postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres`)
-5. **Replace `[YOUR-PASSWORD]`** with your actual database password
+2. Scroll down to **Connection string** section
+3. You'll see two connection strings:
+
+#### For the Application (Transaction Pooler)
+Use this for `DATABASE_URL` in your app:
+
+```
+postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-1-ap-southeast-2.pooler.supabase.com:6543/postgres?pgbouncer=true
+```
+
+#### For Migrations (Direct Connection)
+Use this for `DIRECT_URL` in your app (required for Prisma migrations):
+
+```
+postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-1-ap-southeast-2.pooler.supabase.com:5432/postgres
+```
+
+> **Important:** Supabase uses PgBouncer for connection pooling. The transaction-mode pooler (port 6543) is optimized for apps, while the direct connection (port 5432) is required for Prisma migrations to avoid connection pool conflicts.
 
 ### Step 3: Update Environment Variables
 
-Add the connection string to your `.env.local`:
+Add both connection strings to your `.env.local`:
 
 ```env
-DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres"
+# App connection (with PgBouncer pooler)
+DATABASE_URL="postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-1-ap-southeast-2.pooler.supabase.com:6543/postgres?pgbouncer=true"
+
+# Direct connection (for Prisma migrations)
+DIRECT_URL="postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-1-ap-southeast-2.pooler.supabase.com:5432/postgres"
 ```
 
-### Step 4: Push Database Schema
+### Step 4: Configure Prisma for Supabase
+
+Prisma needs to use the direct connection for schema changes. Update your `prisma/schema.prisma`:
+
+```prisma
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+```
+
+### Step 5: Push Database Schema
 
 ```bash
 npm run db:push
@@ -152,7 +182,7 @@ npm run db:push
 
 This creates all the tables and indexes defined in `prisma/schema.prisma`.
 
-### Step 5: Seed the Database (Optional)
+### Step 6: Seed the Database (Optional)
 
 ```bash
 npm run db:seed
@@ -214,7 +244,8 @@ Follow the prompts:
 
 | Name | Value | Environments |
 |------|-------|--------------|
-| `DATABASE_URL` | `postgresql://postgres:YOUR_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres` | Production, Preview, Development |
+| `DATABASE_URL` | `postgresql://postgres.[REF]:[PASS]@aws-1-ap-southeast-2.pooler.supabase.com:6543/postgres?pgbouncer=true` | Production, Preview, Development |
+| `DIRECT_URL` | `postgresql://postgres.[REF]:[PASS]@aws-1-ap-southeast-2.pooler.supabase.com:5432/postgres` | Production, Preview, Development |
 
 5. Click **Save**
 6. Go to **Deployments**
@@ -331,9 +362,10 @@ npm run lint             # Run ESLint
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DATABASE_URL` | No* | Supabase PostgreSQL connection string. If empty, app runs in Demo Mode. |
+| `DATABASE_URL` | Yes | Supabase connection string (transaction pooler, port 6543) |
+| `DIRECT_URL` | Yes | Supabase direct connection (for Prisma migrations, port 5432) |
 
-*Optional for development/demo, required for production with real data.
+> **Note:** Both connection strings are required when using Supabase with connection pooling.
 
 ---
 
@@ -353,18 +385,33 @@ When `DATABASE_URL` is not set, the app runs in **Demo Mode**:
 ### "Cannot find module '@prisma/client'"
 
 ```bash
+npm install
 npm run postinstall
 ```
 
 ### Database connection errors
 
-1. Verify your `DATABASE_URL` is correct
-2. Check if your Supabase IP allowlist includes your IP
-3. Ensure your database password is correct (no special characters that need URL encoding)
+1. Verify your `DATABASE_URL` and `DIRECT_URL` are correct
+2. Make sure both connection strings are using the correct format:
+   - `DATABASE_URL` should end with `?pgbouncer=true` (port 6543)
+   - `DIRECT_URL` should NOT have `?pgbouncer=true` (port 5432)
+3. Check if your Supabase IP allowlist includes your IP (if configured)
+4. Ensure your database password is correct (no special characters that need URL encoding)
+
+### "Error during migration: connection pool exhausted"
+
+This happens when using PgBouncer with Prisma migrations. Always use `DIRECT_URL` (port 5432) for migrations:
+
+```bash
+# Set the direct URL for this command
+DIRECT_URL="postgresql://..." npm run db:push
+```
 
 ### Build errors on Vercel
 
-1. Make sure all environment variables are set in Vercel dashboard
+1. Make sure all environment variables are set in Vercel dashboard:
+   - `DATABASE_URL`
+   - `DIRECT_URL`
 2. Redeploy after adding environment variables
 3. Check the build logs for specific errors
 

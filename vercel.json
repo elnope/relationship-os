@@ -3,13 +3,14 @@
   "outputDirectory": ".next",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "regions": ["iad1"],
+  "regions": ["sin1"],
   "env": {
     "NEXT_PUBLIC_DATABASE_URL": "@database_url"
   },
   "build": {
     "env": {
-      "DATABASE_URL": "@database_url"
+      "DATABASE_URL": "@database_url",
+      "DIRECT_URL": "@direct_url"
     }
   }
 }
