@@ -9,7 +9,11 @@ declare global {
 let prisma: PrismaClient | undefined;
 
 try {
-  prisma = global.prisma || new PrismaClient({
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL environment variable is not set.');
+  }
+
+  prisma = new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   });
 
@@ -17,7 +21,7 @@ try {
     global.prisma = prisma;
   }
 } catch (error) {
-  console.warn('Prisma client not available. Running in demo mode.');
+  console.warn('Prisma client not available. Running in demo mode.', error);
 }
 
 export { prisma };
