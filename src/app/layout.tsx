@@ -15,7 +15,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#FFF5F6',
+  themeColor: '#F9FAFB',
 };
 
 export default function RootLayout({
@@ -25,7 +25,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="vi">
-      <body className="min-h-screen bg-[#FFF5F6] antialiased">
+      <body className="min-h-screen bg-gray-50 antialiased">
         <Providers>
           {children}
         </Providers>

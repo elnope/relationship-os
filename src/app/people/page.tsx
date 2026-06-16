@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Search, Users, Filter, X, UserPlus, Plus, Tag as TagIcon } from 'lucide-react';
+import { Search, Users, Filter, X, UserPlus, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePeople, useCreatePerson, useTags, useCreateTag } from '@/lib/hooks';
 import PersonCard from '@/components/PersonCard';
@@ -10,6 +10,7 @@ import AddPersonModal from '@/components/AddPersonModal';
 import BottomNav from '@/components/BottomNav';
 import Sidebar from '@/components/Sidebar';
 import { showToast } from '@/components/Toast';
+import EmptyState from '@/components/EmptyState';
 
 const FILTER_OPTIONS = [
   { id: 'all', label: 'Tất cả' },
@@ -139,18 +140,18 @@ export default function PeoplePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFF5F6] pb-24 md:pb-6">
+    <div className="min-h-screen bg-gray-50 pb-24 md:pb-6">
       {/* Sidebar */}
       <Sidebar activeTab="people" />
 
       {/* Main Content - offset for sidebar */}
-      <main className="ml-0 md:ml-24 p-4 md:p-6">
+      <main className="ml-0 md:ml-20 p-4 md:p-6">
         {/* Header */}
-        <header className="sticky top-0 z-40 bg-[#FFF5F6]/95 backdrop-blur-lg border-b border-rose-100/50">
+        <header className="sticky top-0 z-40 bg-gray-50/95 backdrop-blur-lg border-b border-gray-200 mb-4">
           <div className="px-4 md:px-6 py-4">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-300 to-rose-400 flex items-center justify-center shadow-soft">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-rose-400 to-rose-500 flex items-center justify-center shadow-md">
                   <Users className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -164,7 +165,7 @@ export default function PeoplePage() {
               {/* Add Person Button */}
               <button
                 onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-rose-300 to-rose-400 text-white rounded-2xl font-medium shadow-soft hover:from-rose-400 hover:to-rose-500 transition-all"
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-rose-400 to-rose-500 text-white rounded-xl font-medium shadow-md hover:shadow-lg transition-all"
               >
                 <UserPlus className="w-5 h-5" />
                 <span className="hidden sm:inline">Thêm</span>
@@ -179,7 +180,7 @@ export default function PeoplePage() {
                 placeholder="Tìm kiếm..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-10 py-3 bg-white border border-gray-100 rounded-full text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300 transition-all shadow-soft"
+                className="w-full pl-12 pr-10 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300 transition-all shadow-sm"
               />
               {searchQuery && (
                 <button
@@ -310,8 +311,8 @@ export default function PeoplePage() {
           {isLoading && (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {[...Array(8)].map((_, i) => (
-                <div key={i} className="bg-white/80 border border-rose-100/50 rounded-[2rem] p-5 animate-pulse">
-                  <div className="w-full aspect-square rounded-3xl bg-gray-100 mb-4" />
+                <div key={i} className="bg-white border border-gray-100 rounded-3xl p-5 animate-pulse shadow-md">
+                  <div className="w-full aspect-square rounded-2xl bg-gray-100 mb-4" />
                   <div className="h-4 bg-gray-100 rounded-xl mb-2" />
                   <div className="h-3 bg-gray-100 rounded-xl w-2/3" />
                 </div>
@@ -321,27 +322,21 @@ export default function PeoplePage() {
 
           {/* Empty State */}
           {!isLoading && filteredPeople.length === 0 && (
-            <div className="py-16 text-center">
-              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-                <Users className="w-10 h-10 text-gray-300" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                {hasActiveFilters ? 'Không tìm thấy' : 'Chưa có ai trong danh sách'}
-              </h3>
-              <p className="text-gray-500 max-w-xs mx-auto">
-                {hasActiveFilters
-                  ? 'Thử thay đổi từ khóa tìm kiếm hoặc bỏ bớt bộ lọc'
-                  : 'Bắt đầu thêm những người quan trọng trong cuộc sống của bạn'}
-              </p>
-              {hasActiveFilters && (
+            hasActiveFilters ? (
+              <div className="bg-white border border-gray-100 rounded-3xl p-8 shadow-md">
+                <EmptyState.Search query={searchQuery} />
                 <button
                   onClick={clearFilters}
-                  className="mt-4 px-6 py-2 bg-rose-100 text-rose-600 rounded-full font-medium hover:bg-rose-200 transition-colors"
+                  className="mt-4 px-6 py-2 bg-gray-100 text-gray-600 rounded-xl font-medium hover:bg-gray-200 transition-colors"
                 >
                   Xóa bộ lọc
                 </button>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="bg-white border border-gray-100 rounded-3xl p-8 shadow-md">
+                <EmptyState.People onAction={() => setIsAddModalOpen(true)} />
+              </div>
+            )
           )}
 
           {/* People Grid */}

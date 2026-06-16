@@ -12,7 +12,7 @@
   }
 
   body {
-    @apply bg-[#FFF5F6] text-gray-800 antialiased;
+    @apply bg-gray-50 text-gray-800 antialiased;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
@@ -53,6 +53,11 @@
   /* Glass effect */
   .glass {
     @apply bg-white/80 backdrop-blur-md border border-white/20;
+  }
+
+  /* Card with depth */
+  .card-depth {
+    @apply bg-white border border-gray-100 shadow-md;
   }
 
   /* Soft glow effect */

@@ -7,6 +7,7 @@ import { usePromises, useTogglePromise, useCreatePromise } from '@/lib/hooks';
 import BottomNav from '@/components/BottomNav';
 import Sidebar from '@/components/Sidebar';
 import AddPromiseModal from '@/components/AddPromiseModal';
+import EmptyState from '@/components/EmptyState';
 
 export default function PromisesPage() {
   const { data: promises, isLoading } = usePromises();
@@ -27,10 +28,10 @@ export default function PromisesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFF5F6] pb-24 md:pb-6">
+    <div className="min-h-screen bg-gray-50 pb-24 md:pb-6">
       <Sidebar activeTab="promises" />
 
-      <main className="ml-24 p-6">
+      <main className="ml-0 md:ml-20 p-4 md:p-6">
         {/* Header */}
         <header className="mb-6">
           <div className="flex items-center justify-between mb-2">
@@ -65,14 +66,13 @@ export default function PromisesPage() {
           
           <div className="space-y-3">
             {pendingPromises.length === 0 && !isLoading && (
-              <div className="bg-white/80 backdrop-blur-sm border border-rose-100/50 rounded-[2rem] p-8 shadow-soft text-center">
-                <Gift className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p className="text-gray-500">Không có lời hứa nào đang chờ</p>
+              <div className="bg-white border border-gray-100 rounded-3xl p-8 shadow-md">
+                <EmptyState.Promises onAction={() => setIsModalOpen(true)} />
               </div>
             )}
 
             {isLoading && (
-              <div className="bg-white/80 backdrop-blur-sm border border-rose-100/50 rounded-[2rem] p-8 shadow-soft text-center">
+              <div className="bg-white border border-gray-100 rounded-3xl p-8 shadow-md text-center">
                 <div className="animate-pulse">
                   <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto mb-3" />
                   <div className="h-3 bg-gray-200 rounded w-1/3 mx-auto" />
@@ -89,9 +89,9 @@ export default function PromisesPage() {
                 <div
                   key={promise.id}
                   className={cn(
-                    'bg-white/80 backdrop-blur-sm border rounded-[2rem] p-5 shadow-soft',
-                    'hover:shadow-soft-lg transition-all duration-200',
-                    isOverdue ? 'border-red-200' : 'border-rose-100/50'
+                    'bg-white border rounded-2xl p-5 shadow-md',
+                    'hover:shadow-lg transition-all duration-200',
+                    isOverdue ? 'border-red-200' : 'border-gray-100'
                   )}
                 >
                   <div className="flex items-start gap-4">
@@ -141,7 +141,7 @@ export default function PromisesPage() {
               {completedPromises.map((promise) => (
                 <div
                   key={promise.id}
-                  className="bg-white/50 backdrop-blur-sm border border-gray-100 rounded-[2rem] p-5 opacity-60"
+                  className="bg-gray-50 border border-gray-100 rounded-2xl p-5 opacity-60"
                 >
                   <div className="flex items-start gap-4">
                     <button

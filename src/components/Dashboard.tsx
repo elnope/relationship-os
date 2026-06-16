@@ -88,12 +88,12 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFF5F6]">
+    <div className="min-h-screen bg-gray-50">
       {/* Sidebar - Hidden on mobile */}
       <Sidebar activeTab="home" />
 
       {/* Main Content */}
-      <main className="ml-0 md:ml-24 p-4 md:p-6 pb-24 md:pb-6">
+      <main className="ml-0 md:ml-20 p-4 md:p-6 pb-24 md:pb-6">
         {/* Header */}
         <header className="mb-6">
           <div className="flex items-center justify-between">
@@ -129,7 +129,7 @@ export default function Dashboard() {
           {/* LEFT COLUMN - Onboarding & Quick Action */}
           <div className="lg:col-span-2 space-y-6">
             {/* Onboarding Input Box */}
-            <div className="bg-white/80 backdrop-blur-sm border border-rose-100/50 rounded-[2rem] p-6 shadow-soft">
+            <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-md">
               <div className="flex items-center gap-2 mb-4">
                 <Sparkles className="w-5 h-5 text-amber-500" />
                 <span className="text-sm font-medium text-gray-500">Ghi lại tương tác</span>
@@ -138,10 +138,10 @@ export default function Dashboard() {
               {/* Input Box */}
               <button
                 onClick={() => setIsQuickAddOpen(true)}
-                className="w-full p-4 bg-gray-50/50 border-2 border-dashed border-gray-200 rounded-2xl text-left hover:border-rose-300 hover:bg-rose-50/30 transition-all duration-300 group"
+                className="w-full p-4 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl text-left hover:border-rose-300 hover:bg-rose-50/30 transition-all duration-300 group"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-300 to-rose-400 flex items-center justify-center shadow-soft group-hover:scale-105 transition-transform">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-400 to-rose-500 flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
                     <PlusCircle className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1">
@@ -156,7 +156,7 @@ export default function Dashboard() {
               <div className="flex gap-3 mt-4">
                 <button
                   onClick={() => setIsQuickAddOpen(true)}
-                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-rose-300 to-rose-400 text-white rounded-xl font-medium text-sm hover:from-rose-400 hover:to-rose-500 transition-all shadow-soft flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-rose-400 to-rose-500 text-white rounded-xl font-medium text-sm hover:from-rose-500 hover:to-rose-600 transition-all shadow-md flex items-center justify-center gap-2"
                 >
                   <PlusCircle className="w-4 h-4" />
                   Thêm tương tác
@@ -183,7 +183,7 @@ export default function Dashboard() {
                 </Link>
               </div>
 
-              <div className="bg-white/80 backdrop-blur-sm border border-rose-100/50 rounded-[2rem] p-5 shadow-soft">
+              <div className="bg-white border border-gray-100 rounded-3xl p-5 shadow-md">
                 <div className="space-y-3">
                   {recentInteractions.map((interaction: any, index: number) => (
                     <Link
@@ -309,9 +309,9 @@ export default function Dashboard() {
             )}
 
             {/* Quick Stats */}
-            <div className="bg-white/80 backdrop-blur-sm border border-rose-100/50 rounded-[2rem] p-5 shadow-soft">
+            <div className="bg-white border border-gray-100 rounded-3xl p-5 shadow-md">
               <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-rose-400" />
+                <Sparkles className="w-4 h-4 text-amber-500" />
                 Tổng quan
               </h3>
               <div className="space-y-4">
@@ -339,15 +339,18 @@ export default function Dashboard() {
             </div>
 
             {/* Upcoming Promises */}
-            <div className="bg-white/80 backdrop-blur-sm border border-rose-100/50 rounded-[2rem] p-5 shadow-soft">
-              <h3 className="font-semibold text-gray-800 mb-4">Lời hứa sắp tới</h3>
+            <div className="bg-white border border-gray-100 rounded-3xl p-5 shadow-md">
+              <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-amber-500" />
+                Lời hứa sắp tới
+              </h3>
               <div className="space-y-3">
                 {upcomingPromises.map((promise: any) => (
                   <div
                     key={promise.id}
-                    className="flex items-start gap-3 p-3 rounded-xl bg-gray-50/50 hover:bg-rose-50/50 transition-colors cursor-pointer"
+                    className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 hover:bg-amber-50 transition-colors cursor-pointer"
                   >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center flex-shrink-0">
                       <Calendar className="w-5 h-5 text-amber-600" />
                     </div>
                     <div className="flex-1 min-w-0">

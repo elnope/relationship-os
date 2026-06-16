@@ -25,69 +25,70 @@ export default function Sidebar({ activeTab = 'home' }: SidebarProps) {
   };
 
   return (
-    <aside className="fixed left-4 top-1/2 -translate-y-1/2 z-40 hidden md:block">
-      <nav className="flex flex-col items-center gap-3 bg-white/80 backdrop-blur-md border border-rose-100/50 rounded-[2rem] p-3 shadow-soft">
-        {/* Logo */}
-        <Link href="/" className="w-12 h-12 rounded-full bg-gradient-to-br from-rose-300 to-rose-400 flex items-center justify-center mb-2 shadow-soft hover:scale-105 transition-transform">
-          <span className="text-white font-bold text-lg">R</span>
+    <aside className="fixed left-0 top-0 bottom-0 w-20 z-40 hidden md:flex flex-col bg-white border-r border-gray-200 shadow-md">
+      {/* Logo Area */}
+      <div className="h-20 flex items-center justify-center border-b border-gray-100">
+        <Link href="/" className="w-12 h-12 rounded-xl bg-gradient-to-br from-rose-400 to-rose-500 flex items-center justify-center shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300">
+          <span className="text-white font-bold text-xl">R</span>
         </Link>
+      </div>
 
-        {/* Navigation Items */}
-        <div className="flex flex-col items-center gap-2">
-          {navItems.slice(0, 4).map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.href) || activeTab === item.id;
+      {/* Navigation Items */}
+      <nav className="flex-1 flex flex-col items-center justify-center py-6 gap-2">
+        {navItems.slice(0, 4).map((item) => {
+          const Icon = item.icon;
+          const active = isActive(item.href) || activeTab === item.id;
 
-            return (
-              <Link
-                key={item.id}
-                href={item.href}
+          return (
+            <Link
+              key={item.id}
+              href={item.href}
+              className={cn(
+                'group relative w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300',
+                active
+                  ? 'bg-gradient-to-br from-rose-400 to-rose-500 shadow-md scale-105'
+                  : 'hover:bg-gray-100'
+              )}
+              title={item.label}
+            >
+              <Icon
                 className={cn(
-                  'group relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300',
-                  'hover:bg-rose-50',
-                  active && 'bg-gradient-to-br from-rose-300 to-rose-400 shadow-soft-lg'
+                  'w-5 h-5 transition-all duration-200',
+                  active ? 'text-white' : 'text-gray-500 group-hover:text-rose-500'
                 )}
-                title={item.label}
-              >
-                <Icon
-                  className={cn(
-                    'w-5 h-5 transition-colors duration-200',
-                    active ? 'text-white' : 'text-gray-400 group-hover:text-rose-500'
-                  )}
-                />
+              />
 
-                {/* Active indicator dot */}
-                {active && (
-                  <span className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full shadow-md" />
-                )}
+              {/* Active indicator */}
+              {active && (
+                <span className="absolute -right-2 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-rose-500 rounded-l-full" />
+              )}
 
-                {/* Tooltip */}
-                <span className="absolute left-full ml-3 px-3 py-1.5 bg-white text-sm font-medium text-gray-700 rounded-xl whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 shadow-soft border border-rose-100/50">
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
+              {/* Tooltip */}
+              <span className="absolute left-full ml-3 px-3 py-2 bg-gray-900 text-sm text-white font-medium rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-all duration-200 shadow-lg z-50">
+                {item.label}
+                <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-gray-900 rotate-45" />
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
 
-        {/* Divider */}
-        <div className="w-8 h-px bg-gradient-to-r from-transparent via-rose-200 to-transparent my-2" />
-
-        {/* Quick Add Button */}
+      {/* Quick Add Button */}
+      <div className="h-24 flex items-center justify-center border-t border-gray-100">
         <Link
           href="/quick-add"
           className={cn(
-            'w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300',
+            'w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300',
             'bg-gradient-to-br from-rose-400 to-rose-500',
             'hover:from-rose-500 hover:to-rose-600',
-            'shadow-soft-lg hover:shadow-rose-200/50 hover:scale-105',
+            'shadow-md hover:shadow-lg hover:scale-110',
             'active:scale-95'
           )}
           title="Thêm tương tác"
         >
-          <PlusCircle className="w-6 h-6 text-white" />
+          <PlusCircle className="w-7 h-7 text-white" />
         </Link>
-      </nav>
+      </div>
     </aside>
   );
 }
