@@ -1,14 +1,15 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { PlusCircle, TrendingUp, Calendar, Clock, ChevronRight, Sparkles, Heart } from 'lucide-react';
-import { cn, formatTimeAgo, getStrengthColor, getInteractionIcon } from '@/lib/utils';
+import { PlusCircle, TrendingUp, Calendar, Clock, ChevronRight, Sparkles, Heart, AlertTriangle } from 'lucide-react';
+import { cn, formatTimeAgo, getInteractionIcon } from '@/lib/utils';
 import PersonCard from './PersonCard';
 import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
+import QuickAddModal from './QuickAddModal';
 import ToastContainer from './Toast';
-import { useDashboard, useCreateInteraction, usePeople } from '@/lib/hooks';
-import { useRouter } from 'next/navigation';
+import { useDashboard, useCreateInteraction } from '@/lib/hooks';
 
 // Fallback data for when API is not available
 const FALLBACK_USER = { name: 'Minh' };
@@ -33,12 +34,22 @@ const FALLBACK_PROMISES = [
   { id: 'pr-3', title: 'Cà phê bàn chiến thuật', personName: 'Nam Nguyễn', deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
 ];
 
+// Rotating placeholder texts for onboarding
+const PLACEHOLDER_TEXTS = [
+  'Bạn có mối quan hệ nào mới không?',
+  'Ai bạn vừa gặp hôm nay?',
+  'Bạn còn nhớ ra ai chưa thêm vào không?',
+  'Hôm nay đã ghi lại tương tác nào chưa?',
+  'Ai đang cần bạn liên lạc lại?',
+];
+
 export default function Dashboard() {
-  const router = useRouter();
-  
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [currentPlaceholder, setCurrentPlaceholder] = useState(PLACEHOLDER_TEXTS[0]);
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+
   // Use React Query hooks
   const { data: dashboard, isLoading: dashboardLoading } = useDashboard();
-  const { data: people } = usePeople();
   const createInteraction = useCreateInteraction();
 
   // Fall back to mock data if loading or no data
@@ -52,6 +63,19 @@ export default function Dashboard() {
     growingCount: 15,
     fadingCount: 4,
   };
+
+  // Rotate placeholder text every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % PLACEHOLDER_TEXTS.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Animate placeholder change
+  useEffect(() => {
+    setCurrentPlaceholder(PLACEHOLDER_TEXTS[placeholderIndex]);
+  }, [placeholderIndex]);
 
   const handleQuickAddSubmit = (data: {
     personId: string;
@@ -69,9 +93,9 @@ export default function Dashboard() {
       <Sidebar activeTab="home" />
 
       {/* Main Content */}
-      <main className="ml-24 p-6 pb-24 md:pb-6">
+      <main className="ml-0 md:ml-24 p-4 md:p-6 pb-24 md:pb-6">
         {/* Header */}
-        <header className="mb-8">
+        <header className="mb-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-800 leading-tight">
@@ -81,16 +105,16 @@ export default function Dashboard() {
                 {dashboardLoading ? 'Đang tải...' : 'Hôm nay là ngày tuyệt vời để kết nối'}
               </p>
             </div>
-            
+
             {/* Stats - Hidden on small mobile */}
             <div className="hidden md:flex items-center gap-4">
-              <StatCard 
+              <StatCard
                 icon={<TrendingUp className="w-4 h-4" />}
                 label="Tương tác tháng này"
                 value={stats.interactionsThisMonth}
                 color="rose"
               />
-              <StatCard 
+              <StatCard
                 icon={<Calendar className="w-4 h-4" />}
                 label="Lời hứa đang chờ"
                 value={stats.pendingPromises}
@@ -100,125 +124,190 @@ export default function Dashboard() {
           </div>
         </header>
 
-        {/* Needs Attention Section */}
-        <section className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg md:text-xl font-semibold text-gray-800 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              Cần chú ý
-            </h2>
-            <Link href="/people?status=fading" className="text-sm text-rose-500 font-medium hover:text-rose-600 flex items-center gap-1">
-              Xem tất cả <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
-          
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6 scrollbar-hide">
-            {needsAttention.map((person: any) => (
-              <Link key={person.id} href={`/people/${person.id}`} className="flex-shrink-0 w-44 md:w-48">
-                <PersonCard
-                  name={person.name}
-                  avatarUrl={person.avatarUrl}
-                  tags={person.tags}
-                  relationshipStrengthScore={person.relationshipStrengthScore}
-                  relationshipStatus="fading"
-                  size="md"
-                />
-              </Link>
-            ))}
-            
-            {needsAttention.length === 0 && (
-              <div className="w-full py-12 text-center text-gray-400">
-                <Heart className="w-8 h-8 mx-auto mb-2 text-rose-300" />
-                <p>Tuyệt vời! Tất cả mọi người đều khỏe mạnh 💪</p>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Main Grid */}
+        {/* Two-Column Layout */}
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Recent Interactions */}
-          <section className="lg:col-span-2">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg md:text-xl font-semibold text-gray-800">Tương tác gần đây</h2>
-              <Link href="/people" className="text-sm text-rose-500 font-medium hover:text-rose-600 flex items-center gap-1">
-                Xem tất cả <ChevronRight className="w-4 h-4" />
-              </Link>
+          {/* LEFT COLUMN - Onboarding & Quick Action */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Onboarding Input Box */}
+            <div className="bg-white/80 backdrop-blur-sm border border-rose-100/50 rounded-[2rem] p-6 shadow-soft">
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="w-5 h-5 text-amber-500" />
+                <span className="text-sm font-medium text-gray-500">Ghi lại tương tác</span>
+              </div>
+
+              {/* Input Box */}
+              <button
+                onClick={() => setIsQuickAddOpen(true)}
+                className="w-full p-4 bg-gray-50/50 border-2 border-dashed border-gray-200 rounded-2xl text-left hover:border-rose-300 hover:bg-rose-50/30 transition-all duration-300 group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-300 to-rose-400 flex items-center justify-center shadow-soft group-hover:scale-105 transition-transform">
+                    <PlusCircle className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-gray-400 text-sm group-hover:text-rose-500 transition-colors">
+                      {currentPlaceholder}
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Quick action buttons */}
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={() => setIsQuickAddOpen(true)}
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-rose-300 to-rose-400 text-white rounded-xl font-medium text-sm hover:from-rose-400 hover:to-rose-500 transition-all shadow-soft flex items-center justify-center gap-2"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  Thêm tương tác
+                </button>
+                <Link
+                  href="/people"
+                  className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
+                >
+                  <span className="w-4 h-4 rounded-full bg-gray-300 flex items-center justify-center text-xs">+</span>
+                  Thêm người mới
+                </Link>
+              </div>
             </div>
 
-            <div className="bg-white/80 backdrop-blur-sm border border-rose-100/50 rounded-[2rem] p-5 shadow-soft">
-              <div className="space-y-3">
-                {recentInteractions.map((interaction: any, index: number) => (
-                  <Link
-                    key={interaction.id}
-                    href={`/people/${interaction.personId || interaction.person?.id || 'unknown'}`}
-                    className={cn(
-                      'flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-2xl transition-all duration-200',
-                      'hover:bg-rose-50/50 cursor-pointer group',
-                      index === 0 && 'bg-rose-50/30 border border-rose-100/50'
-                    )}
-                  >
-                    {/* Avatar */}
-                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-rose-100 to-rose-200 flex items-center justify-center shadow-sm flex-shrink-0">
-                      <span className="text-rose-600 font-semibold text-xs md:text-sm">
-                        {(interaction.personName || interaction.person?.name || '??')
-                          .split(' ')
-                          .slice(-1)[0]
-                          .substring(0, 2)
-                          .toUpperCase()}
-                      </span>
-                    </div>
+            {/* Recent Interactions */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-gray-400" />
+                  Tương tác gần đây
+                </h2>
+                <Link href="/people" className="text-sm text-rose-500 font-medium hover:text-rose-600 flex items-center gap-1">
+                  Xem tất cả <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
 
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl">{getInteractionIcon(interaction.interactionType || interaction.type)}</span>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-gray-800 text-sm md:text-base leading-tight">
-                            {interaction.interactionType === 'coffee' && 'Cà phê với '}
-                            {interaction.interactionType === 'call' && 'Gọi điện cho '}
-                            {interaction.interactionType === 'meal' && 'Đi ăn với '}
-                            {interaction.interactionType === 'chat' && 'Chat với '}
-                            {interaction.interactionType === 'video_call' && 'Video call với '}
-                            {interaction.interactionType === 'activity' && 'Tập gym với '}
-                            {(interaction.type === 'coffee' || interaction.interactionType === 'coffee') && 'Cà phê với '}
-                            {interaction.type === 'call' && 'Gọi điện cho '}
-                            {interaction.type === 'meal' && 'Đi ăn với '}
-                            {interaction.type === 'activity' && 'Tập gym với '}
-                            {interaction.personName || interaction.person?.name || 'Unknown'}
-                          </p>
-                          {interaction.freeTextNote || interaction.note ? (
-                            <p className="text-xs md:text-sm text-gray-500 truncate leading-relaxed">
-                              {interaction.freeTextNote || interaction.note}
+              <div className="bg-white/80 backdrop-blur-sm border border-rose-100/50 rounded-[2rem] p-5 shadow-soft">
+                <div className="space-y-3">
+                  {recentInteractions.map((interaction: any, index: number) => (
+                    <Link
+                      key={interaction.id}
+                      href={`/people/${interaction.personId || interaction.person?.id || 'unknown'}`}
+                      className={cn(
+                        'flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-2xl transition-all duration-200',
+                        'hover:bg-rose-50/50 cursor-pointer group',
+                        index === 0 && 'bg-rose-50/30 border border-rose-100/50'
+                      )}
+                    >
+                      {/* Avatar */}
+                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-rose-100 to-rose-200 flex items-center justify-center shadow-sm flex-shrink-0">
+                        <span className="text-rose-600 font-semibold text-xs md:text-sm">
+                          {(interaction.personName || interaction.person?.name || '??')
+                            .split(' ')
+                            .slice(-1)[0]
+                            .substring(0, 2)
+                            .toUpperCase()}
+                        </span>
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">{getInteractionIcon(interaction.interactionType || interaction.type)}</span>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-gray-800 text-sm md:text-base leading-tight">
+                              {interaction.interactionType === 'coffee' && 'Cà phê với '}
+                              {interaction.interactionType === 'call' && 'Gọi điện cho '}
+                              {interaction.interactionType === 'meal' && 'Đi ăn với '}
+                              {interaction.interactionType === 'chat' && 'Chat với '}
+                              {interaction.interactionType === 'video_call' && 'Video call với '}
+                              {interaction.interactionType === 'activity' && 'Tập gym với '}
+                              {(interaction.type === 'coffee' || interaction.interactionType === 'coffee') && 'Cà phê với '}
+                              {interaction.type === 'call' && 'Gọi điện cho '}
+                              {interaction.type === 'meal' && 'Đi ăn với '}
+                              {interaction.type === 'activity' && 'Tập gym với '}
+                              {interaction.personName || interaction.person?.name || 'Unknown'}
                             </p>
-                          ) : null}
+                            {interaction.freeTextNote || interaction.note ? (
+                              <p className="text-xs md:text-sm text-gray-500 truncate leading-relaxed">
+                                {interaction.freeTextNote || interaction.note}
+                              </p>
+                            ) : null}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Meta */}
-                    <div className="text-right flex-shrink-0">
-                      <div className="flex items-center gap-0.5 text-rose-400">
-                        {[...Array(interaction.rating)].map((_, i) => (
-                          <span key={i} className="text-xs">★</span>
-                        ))}
-                        {[...Array(5 - interaction.rating)].map((_, i) => (
-                          <span key={i} className="text-gray-200 text-xs">★</span>
-                        ))}
+                      {/* Meta */}
+                      <div className="text-right flex-shrink-0">
+                        <div className="flex items-center gap-0.5 text-rose-400">
+                          {[...Array(interaction.rating)].map((_, i) => (
+                            <span key={i} className="text-xs">★</span>
+                          ))}
+                          {[...Array(5 - interaction.rating)].map((_, i) => (
+                            <span key={i} className="text-gray-200 text-xs">★</span>
+                          ))}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1 flex items-center gap-1 justify-end whitespace-nowrap">
+                          <Clock className="w-3 h-3" />
+                          {formatTimeAgo(interaction.interactionDate || interaction.date)}
+                        </p>
                       </div>
-                      <p className="text-xs text-gray-400 mt-1 flex items-center gap-1 justify-end whitespace-nowrap">
-                        <Clock className="w-3 h-3" />
-                        {formatTimeAgo(interaction.interactionDate || interaction.date)}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
-          </section>
+          </div>
 
-          {/* Sidebar Widgets */}
-          <section className="space-y-6">
+          {/* RIGHT COLUMN - Urgent Actions */}
+          <div className="space-y-6">
+            {/* Needs Attention - RED WARNING STYLE */}
+            {needsAttention.length > 0 && (
+              <div className="bg-white border-2 border-red-200 rounded-[2rem] p-5 shadow-soft">
+                {/* Red Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-red-600 flex items-center gap-2">
+                    <span className="text-xl animate-pulse">🚨</span>
+                    Cần chú ý ngay
+                  </h2>
+                  <span className="px-2.5 py-1 bg-red-100 text-red-600 text-xs font-bold rounded-full">
+                    {needsAttention.length}
+                  </span>
+                </div>
+
+                <p className="text-sm text-red-500 mb-4">
+                  Những người bạn chưa liên lạc được một thời gian
+                </p>
+
+                {/* List of urgent people */}
+                <div className="space-y-3">
+                  {needsAttention.slice(0, 4).map((person: any) => (
+                    <Link key={person.id} href={`/people/${person.id}`}>
+                      <div className="flex items-center gap-3 p-3 bg-red-50/50 border border-red-100 rounded-xl hover:bg-red-100/50 transition-colors">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-200 to-red-300 flex items-center justify-center flex-shrink-0">
+                          <span className="text-red-600 font-semibold text-sm">
+                            {person.name.split(' ').slice(-1)[0].substring(0, 2).toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-800 text-sm truncate">{person.name}</p>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <AlertTriangle className="w-3 h-3 text-red-400" />
+                            <span className="text-xs text-red-500 font-medium">Score: {person.relationshipStrengthScore}</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-red-400" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+
+                <Link
+                  href="/people?status=fading"
+                  className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-red-400 to-red-500 text-white rounded-xl font-medium text-sm hover:from-red-500 hover:to-red-600 transition-all shadow-sm"
+                >
+                  Xem tất cả cần chú ý
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
+            )}
+
             {/* Quick Stats */}
             <div className="bg-white/80 backdrop-blur-sm border border-rose-100/50 rounded-[2rem] p-5 shadow-soft">
               <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -236,7 +325,7 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500 text-sm">Cần chú ý</span>
-                  <span className="font-semibold text-amber-600">{stats.fadingCount}</span>
+                  <span className="font-semibold text-red-500">{stats.fadingCount}</span>
                 </div>
                 <div className="h-px bg-gradient-to-r from-transparent via-rose-200 to-transparent my-2" />
                 <div className="flex items-center justify-between">
@@ -271,6 +360,13 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
+              <Link
+                href="/promises"
+                className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 bg-amber-50 text-amber-600 rounded-xl font-medium text-sm hover:bg-amber-100 transition-all"
+              >
+                Xem tất cả lời hứa
+                <ChevronRight className="w-4 h-4" />
+              </Link>
             </div>
 
             {/* Quick tip - Mobile only */}
@@ -279,13 +375,14 @@ export default function Dashboard() {
                 💡 Mẹo: Nhấn nút <span className="font-bold">+</span> bên dưới để nhanh chóng ghi lại tương tác!
               </p>
             </div>
-          </section>
+          </div>
         </div>
       </main>
 
       {/* FAB - Hidden on mobile, links to quick-add */}
       <Link
         href="/quick-add"
+        onClick={(e) => { e.preventDefault(); setIsQuickAddOpen(true); }}
         className={cn(
           'fixed bottom-24 md:bottom-8 right-8 z-50 hidden md:flex',
           'w-16 h-16 rounded-full',
@@ -305,6 +402,13 @@ export default function Dashboard() {
 
       {/* Bottom Navigation - Mobile only */}
       <BottomNav />
+
+      {/* Quick Add Modal */}
+      <QuickAddModal
+        isOpen={isQuickAddOpen}
+        onClose={() => setIsQuickAddOpen(false)}
+        onSubmit={handleQuickAddSubmit}
+      />
 
       {/* Toast Container */}
       <ToastContainer />

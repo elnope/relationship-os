@@ -2,13 +2,14 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Search, Users, Filter, X, UserPlus } from 'lucide-react';
+import { Search, Users, Filter, X, UserPlus, Plus, Tag as TagIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { usePeople, useCreatePerson } from '@/lib/hooks';
+import { usePeople, useCreatePerson, useTags, useCreateTag } from '@/lib/hooks';
 import PersonCard from '@/components/PersonCard';
 import AddPersonModal from '@/components/AddPersonModal';
 import BottomNav from '@/components/BottomNav';
 import Sidebar from '@/components/Sidebar';
+import { showToast } from '@/components/Toast';
 
 const FILTER_OPTIONS = [
   { id: 'all', label: 'Tất cả' },
@@ -32,10 +33,32 @@ export default function PeoplePage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [showAddTag, setShowAddTag] = useState(false);
+  const [newTagName, setNewTagName] = useState('');
 
   // Fetch people from API
   const { data: people, isLoading } = usePeople();
   const createPerson = useCreatePerson();
+  const { data: tags } = useTags();
+  const createTag = useCreateTag();
+
+  // Combine static relationship types with dynamic tags
+  const allFilters = useMemo(() => {
+    const staticTypes = RELATIONSHIP_FILTERS.map(f => ({ id: f.id, label: f.label, color: f.color, isTag: false }));
+    const dynamicTags = (tags || []).map((t: any) => ({ id: `tag-${t.id}`, label: t.name, color: t.color, isTag: true }));
+    return [...staticTypes, ...dynamicTags];
+  }, [tags]);
+
+  // Handle add tag
+  const handleAddTag = () => {
+    if (!newTagName.trim()) {
+      showToast('Vui lòng nhập tên tag', 'error');
+      return;
+    }
+    createTag.mutate({ name: newTagName.trim() });
+    setNewTagName('');
+    setShowAddTag(false);
+  };
 
   // Filter and sort people
   const filteredPeople = useMemo(() => {
@@ -58,9 +81,19 @@ export default function PeoplePage() {
           return false;
         }
 
-        // Type filter
-        if (typeFilter && person.relationshipType !== typeFilter) {
-          return false;
+        // Type filter (relationship type or tag)
+        if (typeFilter) {
+          if (typeFilter.startsWith('tag-')) {
+            // Filter by tag - check if person has this tag
+            const tagId = typeFilter.replace('tag-', '');
+            const hasTag = person.tags?.some((t: any) => t.tag?.id === tagId);
+            if (!hasTag) return false;
+          } else {
+            // Filter by relationship type
+            if (person.relationshipType !== typeFilter) {
+              return false;
+            }
+          }
         }
 
         return true;
@@ -207,7 +240,7 @@ export default function PeoplePage() {
                 <Filter className="w-3 h-3" />
                 Tất cả loại
               </button>
-              {RELATIONSHIP_FILTERS.map((filter) => (
+              {allFilters.map((filter) => (
                 <button
                   key={filter.id}
                   onClick={() => setTypeFilter(typeFilter === filter.id ? null : filter.id)}
@@ -224,6 +257,34 @@ export default function PeoplePage() {
                   {filter.label}
                 </button>
               ))}
+              {/* Add Tag Button */}
+              {showAddTag ? (
+                <div className="flex-shrink-0 flex items-center gap-1">
+                  <input
+                    type="text"
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleAddTag(); if (e.key === 'Escape') { setShowAddTag(false); setNewTagName(''); } }}
+                    placeholder="Tên tag..."
+                    className="w-24 px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-200"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleAddTag}
+                    className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition-colors"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowAddTag(true)}
+                  className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-all border border-emerald-200"
+                >
+                  <Plus className="w-3 h-3" />
+                  Thêm loại
+                </button>
+              )}
             </div>
           </div>
         </header>

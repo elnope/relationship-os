@@ -1,21 +1,29 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckSquare, Calendar, Gift, Clock, CheckCircle, Circle } from 'lucide-react';
+import { CheckSquare, Calendar, Gift, Clock, CheckCircle, Circle, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { usePromises, useTogglePromise } from '@/lib/hooks';
+import { usePromises, useTogglePromise, useCreatePromise } from '@/lib/hooks';
 import BottomNav from '@/components/BottomNav';
 import Sidebar from '@/components/Sidebar';
+import AddPromiseModal from '@/components/AddPromiseModal';
 
 export default function PromisesPage() {
   const { data: promises, isLoading } = usePromises();
   const togglePromise = useTogglePromise();
+  const createPromise = useCreatePromise();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const pendingPromises = promises?.filter(p => !p.isCompleted) || [];
   const completedPromises = promises?.filter(p => p.isCompleted) || [];
 
   const handleToggle = (id: string, currentState: boolean) => {
     togglePromise.mutate({ id, isCompleted: !currentState });
+  };
+
+  const handleCreatePromise = (data: { personId: string; title: string; deadline: string; description?: string }) => {
+    createPromise.mutate(data);
+    setIsModalOpen(false);
   };
 
   return (
@@ -25,16 +33,26 @@ export default function PromisesPage() {
       <main className="ml-24 p-6">
         {/* Header */}
         <header className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-300 to-amber-400 flex items-center justify-center shadow-soft">
-              <CheckSquare className="w-6 h-6 text-white" />
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-300 to-amber-400 flex items-center justify-center shadow-soft">
+                <CheckSquare className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-800">Lời hứa</h1>
+                <p className="text-sm text-gray-500">
+                  {pendingPromises.length} lời hứa đang chờ
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-800">Lời hứa</h1>
-              <p className="text-sm text-gray-500">
-                {pendingPromises.length} lời hứa đang chờ
-              </p>
-            </div>
+            {/* Create Promise Button */}
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-300 to-amber-400 text-white rounded-2xl font-medium shadow-soft hover:from-amber-400 hover:to-amber-500 transition-all"
+            >
+              <PlusCircle className="w-5 h-5" />
+              <span className="hidden sm:inline">Tạo lời hứa</span>
+            </button>
           </div>
         </header>
 
@@ -149,6 +167,14 @@ export default function PromisesPage() {
 
       {/* Bottom Navigation */}
       <BottomNav />
+
+      {/* Create Promise Modal */}
+      <AddPromiseModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleCreatePromise}
+        isLoading={createPromise.isPending}
+      />
     </div>
   );
 }

@@ -5,43 +5,48 @@ import { Settings as SettingsIcon, Moon, Bell, Shield, Database, Palette, Chevro
 import { cn } from '@/lib/utils';
 import BottomNav from '@/components/BottomNav';
 import Sidebar from '@/components/Sidebar';
+import { showToast } from '@/components/Toast';
 
 const SETTINGS_SECTIONS = [
   {
     title: 'Tài khoản',
     items: [
-      { icon: User, label: 'Hồ sơ', description: 'Cập nhật thông tin cá nhân' },
-      { icon: Shield, label: 'Bảo mật', description: 'Đổi mật khẩu, xác thực' },
+      { icon: User, label: 'Hồ sơ', description: 'Cập nhật thông tin cá nhân', action: 'Hồ sơ đang phát triển...' },
+      { icon: Shield, label: 'Bảo mật', description: 'Đổi mật khẩu, xác thực', action: 'Tính năng đang phát triển...' },
     ],
   },
   {
     title: 'Hiển thị',
     items: [
-      { icon: Palette, label: 'Giao diện', description: 'Chủ đề sáng/tối' },
-      { icon: Moon, label: 'Chế độ', description: 'Tự động theo hệ thống' },
+      { icon: Palette, label: 'Giao diện', description: 'Chủ đề sáng/tối', action: 'Giao diện đang phát triển...' },
+      { icon: Moon, label: 'Chế độ', description: 'Tự động theo hệ thống', action: 'Chế độ đang phát triển...' },
     ],
   },
   {
     title: 'Thông báo',
     items: [
-      { icon: Bell, label: 'Nhắc nhở', description: 'Lời hứa, sinh nhật' },
+      { icon: Bell, label: 'Nhắc nhở', description: 'Lời hứa, sinh nhật', action: 'Nhắc nhở đang phát triển...' },
     ],
   },
   {
     title: 'Dữ liệu',
     items: [
-      { icon: Database, label: 'Xuất dữ liệu', description: 'Tải về dữ liệu của bạn' },
+      { icon: Database, label: 'Xuất dữ liệu', description: 'Tải về dữ liệu của bạn', action: 'Đang phát triển...' },
     ],
   },
   {
     title: 'Hỗ trợ',
     items: [
-      { icon: HelpCircle, label: 'Trợ giúp', description: 'Câu hỏi thường gặp' },
+      { icon: HelpCircle, label: 'Trợ giúp', description: 'Câu hỏi thường gặp', action: 'Trợ giúp đang phát triển...' },
     ],
   },
 ];
 
 export default function SettingsPage() {
+  const handleSettingsClick = (label: string, message: string) => {
+    showToast(message, 'info');
+  };
+
   return (
     <div className="min-h-screen bg-[#FFF5F6] pb-24 md:pb-6">
       <Sidebar activeTab="settings" />
@@ -75,6 +80,7 @@ export default function SettingsPage() {
                   return (
                     <button
                       key={item.label}
+                      onClick={() => handleSettingsClick(item.label, item.action)}
                       className={cn(
                         'w-full flex items-center gap-4 p-5 text-left',
                         'hover:bg-rose-50/50 transition-colors',

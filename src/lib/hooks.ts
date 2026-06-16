@@ -465,6 +465,63 @@ export function useTags() {
 }
 
 /**
+ * Create a new tag
+ */
+export function useCreateTag() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: {
+      name: string;
+      color?: string;
+      icon?: string;
+    }) => {
+      if (isDemoMode()) {
+        return { id: `tag-${Date.now()}`, ...input, createdAt: new Date().toISOString() };
+      }
+      return await fetchApi<any>('/tags', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      });
+    },
+
+    onMutate: async (newTag) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.tags });
+
+      const previousTags = queryClient.getQueryData<any[]>(queryKeys.tags);
+
+      // Optimistic tag
+      const optimisticTag = {
+        id: `temp-${Date.now()}`,
+        name: newTag.name,
+        color: newTag.color || '#6366F1',
+        icon: newTag.icon || null,
+        createdAt: new Date().toISOString(),
+      };
+
+      queryClient.setQueryData<any[]>(queryKeys.tags, (old) => {
+        if (!old) return [optimisticTag];
+        return [...old, optimisticTag];
+      });
+
+      return { previousTags };
+    },
+
+    onError: (_err, _newTag, context) => {
+      if (context?.previousTags) {
+        queryClient.setQueryData(queryKeys.tags, context.previousTags);
+      }
+      showToast('Không thể tạo tag', 'error');
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tags });
+      showToast('Đã thêm tag mới!', 'success');
+    },
+  });
+}
+
+/**
  * Fetch promises
  */
 export function usePromises(options: { personId?: string; status?: 'pending' | 'completed' } = {}) {

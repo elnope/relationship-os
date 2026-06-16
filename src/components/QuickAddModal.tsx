@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Coffee, Phone, Video, MessageCircle, UtensilsCrossed, Beer, Activity, Gift, Mail, MessageSquare, MoreHorizontal, Search } from 'lucide-react';
+import { X, Coffee, Phone, Video, MessageCircle, UtensilsCrossed, Beer, Activity, Gift, Mail, MessageSquare, MoreHorizontal, Search, AlertCircle } from 'lucide-react';
 import { cn, getInteractionLabel } from '@/lib/utils';
 import StarRating from './StarRating';
 import { showToast } from './Toast';
@@ -78,6 +78,10 @@ export default function QuickAddModal({ isOpen, onClose, onSubmit }: QuickAddMod
   const [showSearch, setShowSearch] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Validation errors state
+  const [errors, setErrors] = useState<{ person?: string; type?: string }>({});
+  const [touched, setTouched] = useState<{ person?: boolean; type?: boolean }>({});
+
   // Fetch people from API or use defaults
   const { data: peopleData } = usePeople();
   const people = peopleData?.length ? peopleData : DEFAULT_PEOPLE;
@@ -93,6 +97,8 @@ export default function QuickAddModal({ isOpen, onClose, onSubmit }: QuickAddMod
       setSearchQuery('');
       setShowSearch(false);
       setIsSubmitting(false);
+      setErrors({});
+      setTouched({});
     }
   }, [isOpen]);
 
@@ -122,18 +128,34 @@ export default function QuickAddModal({ isOpen, onClose, onSubmit }: QuickAddMod
   };
 
   const handleSubmit = async () => {
-    if (!selectedPerson || !selectedType) {
-      showToast('Vui lòng chọn người và loại tương tác', 'error');
+    // Mark fields as touched for inline validation
+    setTouched({ person: true, type: true });
+
+    // Validate
+    const newErrors: { person?: string; type?: string } = {};
+    if (!selectedPerson) {
+      newErrors.person = 'Vui lòng chọn người để tương tác!';
+    }
+    if (!selectedType) {
+      newErrors.type = 'Vui lòng chọn loại tương tác!';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      // Show toast notification
+      if (newErrors.person) {
+        showToast(newErrors.person, 'error');
+      } else if (newErrors.type) {
+        showToast(newErrors.type, 'error');
+      }
       return;
     }
 
     setIsSubmitting(true);
-    
+
     // Small delay for UX
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    const interactionLabel = INTERACTION_TYPES.find(t => t.id === selectedType)?.label || 'tương tác';
-    
     onSubmit({
       personId: selectedPerson.id,
       interactionType: selectedType,
@@ -145,8 +167,6 @@ export default function QuickAddModal({ isOpen, onClose, onSubmit }: QuickAddMod
     setIsSubmitting(false);
     onClose();
   };
-
-  const canSubmit = selectedPerson && selectedType;
 
   if (!isOpen) return null;
 
@@ -178,6 +198,14 @@ export default function QuickAddModal({ isOpen, onClose, onSubmit }: QuickAddMod
           {/* Step 1: Person Selection */}
           {showSearch || !selectedPerson ? (
             <div className="space-y-4">
+              {/* Inline Error */}
+              {touched.person && errors.person && (
+                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  {errors.person}
+                </div>
+              )}
+
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
@@ -201,6 +229,8 @@ export default function QuickAddModal({ isOpen, onClose, onSubmit }: QuickAddMod
                       onClick={() => {
                         setSelectedPerson(person);
                         setShowSearch(false);
+                        setErrors((prev) => ({ ...prev, person: undefined }));
+                        setTouched((prev) => ({ ...prev, person: true }));
                       }}
                       className={cn(
                         'flex-shrink-0 flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all duration-200',
@@ -257,6 +287,13 @@ export default function QuickAddModal({ isOpen, onClose, onSubmit }: QuickAddMod
 
           {/* Step 2: Interaction Type */}
           <div className="space-y-3">
+            {/* Inline Error */}
+            {touched.type && errors.type && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {errors.type}
+              </div>
+            )}
             <h3 className="text-sm font-medium text-gray-500">Loại tương tác</h3>
             <div className="grid grid-cols-4 gap-2">
               {INTERACTION_TYPES.map((type) => {
@@ -266,7 +303,11 @@ export default function QuickAddModal({ isOpen, onClose, onSubmit }: QuickAddMod
                 return (
                   <button
                     key={type.id}
-                    onClick={() => setSelectedType(type.id)}
+                    onClick={() => {
+                      setSelectedType(type.id);
+                      setErrors((prev) => ({ ...prev, type: undefined }));
+                      setTouched((prev) => ({ ...prev, type: true }));
+                    }}
                     className={cn(
                       'flex flex-col items-center gap-1.5 p-3 rounded-2xl border-2 transition-all duration-200',
                       isSelected
@@ -335,12 +376,12 @@ export default function QuickAddModal({ isOpen, onClose, onSubmit }: QuickAddMod
         <div className="p-5 border-t border-rose-100/50 flex-shrink-0">
           <button
             onClick={handleSubmit}
-            disabled={!canSubmit || isSubmitting}
+            disabled={isSubmitting}
             className={cn(
               'w-full py-4 rounded-full font-semibold text-lg transition-all duration-300',
-              canSubmit && !isSubmitting
+              !isSubmitting
                 ? 'bg-gradient-to-r from-rose-300 to-rose-400 text-white hover:from-rose-400 hover:to-rose-500 shadow-soft-lg hover:shadow-rose-200/50 hover:scale-[1.02] active:scale-[0.98]'
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             )}
           >
             {isSubmitting ? 'Đang lưu...' : 'Lưu tương tác'}
