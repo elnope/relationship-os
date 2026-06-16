@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { showToast } from '@/components/Toast';
 
 // Check if we're in demo mode (no DATABASE_URL)
-const isDemoMode = () => !process.env.NEXT_PUBLIC_DATABASE_URL;
+const isDemoMode = () => !process.env.DATABASE_URL;
 
 // API base URL
 const API_BASE = '/api';
